@@ -1,0 +1,94 @@
+# Create your views here.
+def signup(request):
+    if request.method=="POST":
+        username=request.POST.get("username")
+        email=request.POST.get("email")
+        password=request.POST.get("password")
+        confirmpassword=request.POST.get("confirmpassword")
+
+        myuser=User.objects.create_user(username,email,password)
+        myuser.save()
+        return redirect("login")
+    
+
+
+    return render(request,"signup.html")
+
+def login(request):
+    if request.method=="POST":
+        username=request.POST.get("username")
+        password=request.POST.get("password")
+        User=authenticate(username=username,password=password)
+        if User is not None:
+            auth_login(request,User)
+            request.session['username'] = username
+            return render(request,"index.html")
+        else:
+            return redirect("/signup")
+        
+
+
+    return render(request,"login.html")
+
+def index(request):
+    products=None
+    category=Category.get_all_categories()
+
+
+    categoryid=request.GET.get('category')
+    if categoryid:
+        products=Product.get_all_product_by_category_id(categoryid)
+    else:
+        products=Product.get_all_products()    
+
+  
+    data={}
+    data['products']=products
+    data['category']=category
+    return render(request, 'index.html',data)
+
+def productdetail(request,pk):
+    products=Product.objects.get(pk=pk)
+    return render(request,"productdetail.html",{'products':products})
+
+def set_session(request):
+    request.session['username']= 'prince'
+    request.session['email']='prince@gmail.com'
+    return HttpResponse("session data set succesfully")
+
+def get_session(request):
+    username=request.session.get('username','guest')
+    email=request.session.get('email','no email')
+    return HttpResponse(f"username:{username},Email:{email}")
+
+def del_session(request):
+    try:
+        del request.session['username']
+        del request.session['email']
+    except KeyError:
+        pass
+    return HttpResponse("Session data deleted!")
+
+
+
+
+
+def add_to_cart(request,product_id):
+    cart=request.session.get('cart',{})
+    if str ('product_id') in cart:
+        cart[str('product_id')]+=1
+    else:
+        cart[str('product_id')]=1 
+        request.session['cart']=cart
+        return redirect('index')   
+    username=request.session['username']
+    product_id=request.GET.get('prod_id')
+    product_name=Product.objects.get(id=product_id)
+    product=Product.objects.filter(id=product_id)
+    for p in product:
+        image=p.image
+        price=p.price
+        
+        cart=Cart(username=username,product=product_name,image=image,price=price)
+        cart.save()
+        return redirect("index")
